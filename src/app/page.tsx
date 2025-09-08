@@ -9,6 +9,7 @@ export default function Home() {
   const [department, setDepartment] = useState("");
   const [category, setCategory] = useState("");
   const [body, setBody] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [mediaItemType, setMediaItemType] = useState("");
   const [mediaItemStoragePath, setMediaItemStoragePath] = useState("");
   const [mediaItemTitle, setMediaItemTitle] = useState("");
@@ -42,6 +43,20 @@ export default function Home() {
       });
     }
 
+    if (file && category) {
+      const bucketName = category.toLowerCase().replace(/\s+/g, "-");
+      const filePath = `${file.name}`; // Upload to the root of the bucket
+      const { error: uploadError } = await supabase.storage
+        .from(bucketName)
+        .upload(filePath, file);
+
+      if (uploadError) {
+        setSubmissionError(`File upload failed: ${uploadError.message}`);
+        return;
+      }
+      setMediaItemStoragePath(filePath);
+    }
+
     const { data, error } = await supabase
       .from("content")
       .insert([
@@ -70,6 +85,7 @@ export default function Home() {
       setDepartment("");
       setCategory("");
       setBody("");
+      setFile(null);
       setMediaItemType("");
       setMediaItemStoragePath("");
       setMediaItemTitle("");
@@ -156,6 +172,19 @@ export default function Home() {
               onChange={(e) => setBody(e.target.value)}
               className="rounded-md border border-solid border-black/[.08] dark:border-white/[.145] p-2"
               required
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="fileUpload" className="font-medium">
+              Upload Art File
+            </label>
+            <input
+              type="file"
+              id="fileUpload"
+              onChange={(e) =>
+                setFile(e.target.files ? e.target.files[0] : null)
+              }
+              className="rounded-md border border-solid border-black/[.08] dark:border-white/[.145] p-2"
             />
           </div>
           <div className="flex flex-col gap-4 border p-4 rounded-md">
