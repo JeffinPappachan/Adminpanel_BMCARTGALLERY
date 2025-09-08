@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 export default function Home() {
@@ -9,37 +9,38 @@ export default function Home() {
   const [department, setDepartment] = useState("");
   const [category, setCategory] = useState("");
   const [body, setBody] = useState("");
-  const [mediaItems, setMediaItems] = useState<any[]>([]);
   const [mediaItemType, setMediaItemType] = useState("");
   const [mediaItemStoragePath, setMediaItemStoragePath] = useState("");
   const [mediaItemTitle, setMediaItemTitle] = useState("");
   const [isFeatured, setIsFeatured] = useState(false);
   const [tags, setTags] = useState("");
-  const [lastInsertId, setLastInsertId] = useState<string | null>(null);
+  const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
 
-  const handleAddMediaItem = () => {
-    if (mediaItemType && mediaItemStoragePath && mediaItemTitle) {
-      setMediaItems([
-        ...mediaItems,
-        {
-          type: mediaItemType,
-          storagePath: mediaItemStoragePath,
-          title: mediaItemTitle,
-        },
-      ]);
-      setMediaItemType("");
-      setMediaItemStoragePath("");
-      setMediaItemTitle("");
-    } else {
-      alert("Please fill all media item fields.");
+  useEffect(() => {
+    if (submissionSuccess) {
+      const timer = setTimeout(() => {
+        setSubmissionSuccess(false);
+      }, 5000); // Hide after 5 seconds
+      return () => clearTimeout(timer);
     }
-  };
+  }, [submissionSuccess]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLastInsertId(null);
+    setSubmissionSuccess(false);
+    setSubmissionError(null);
 
     const tagsArray = tags.split(",").map((tag) => tag.trim());
+
+    const mediaItemsPayload = [];
+    if (mediaItemType && mediaItemStoragePath && mediaItemTitle) {
+      mediaItemsPayload.push({
+        type: mediaItemType,
+        storagePath: mediaItemStoragePath,
+        title: mediaItemTitle,
+      });
+    }
 
     const { data, error } = await supabase
       .from("content")
@@ -50,7 +51,7 @@ export default function Home() {
           department,
           category,
           body,
-          media_items: mediaItems,
+          media_items: mediaItemsPayload,
           is_featured: isFeatured,
           tags: tagsArray,
         },
@@ -59,21 +60,19 @@ export default function Home() {
 
     if (error) {
       console.error("Error inserting data:", error);
-      alert("Error submitting the form. Check the console for details.");
+      setSubmissionError(`Submission failed: ${error.message}`);
     } else {
-      const newContentId = data?.[0]?.content_id;
       console.log("Data inserted successfully:", data);
-      alert(`Form submitted successfully! New Content ID: ${newContentId}`);
-      if (newContentId) {
-        setLastInsertId(newContentId);
-      }
+      setSubmissionSuccess(true);
       // Clear form fields
       setTitle("");
       setAuthorName("");
       setDepartment("");
       setCategory("");
       setBody("");
-      setMediaItems([]);
+      setMediaItemType("");
+      setMediaItemStoragePath("");
+      setMediaItemTitle("");
       setIsFeatured(false);
       setTags("");
     }
@@ -200,23 +199,6 @@ export default function Home() {
                 className="rounded-md border border-solid border-black/[.08] dark:border-white/[.145] p-2"
               />
             </div>
-            <button
-              type="button"
-              onClick={handleAddMediaItem}
-              className="rounded-md bg-blue-500 text-white p-2"
-            >
-              Add Media Item
-            </button>
-            <div>
-              <h4 className="font-medium">Added Media Items:</h4>
-              <ul>
-                {mediaItems.map((item, index) => (
-                  <li key={index}>
-                    {item.title} ({item.type})
-                  </li>
-                ))}
-              </ul>
-            </div>
           </div>
           <div className="flex flex-col gap-2">
             <label htmlFor="tags" className="font-medium">
@@ -250,10 +232,14 @@ export default function Home() {
             Submit
           </button>
         </form>
-        {lastInsertId && (
+        {submissionSuccess && (
           <div className="mt-4 p-4 bg-green-100 text-green-800 rounded-md w-full max-w-sm">
-            <p>Successfully created content with ID:</p>
-            <p className="font-bold">{lastInsertId}</p>
+            <p className="font-bold">Your data has been added.</p>
+          </div>
+        )}
+        {submissionError && (
+          <div className="mt-4 p-4 bg-red-100 text-red-800 rounded-md w-full max-w-sm">
+            <p className="font-bold">{submissionError}</p>
           </div>
         )}
       </main>
