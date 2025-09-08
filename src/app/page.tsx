@@ -9,24 +9,40 @@ export default function Home() {
   const [department, setDepartment] = useState("");
   const [category, setCategory] = useState("");
   const [body, setBody] = useState("");
-  const [mediaItems, setMediaItems] = useState("");
+  const [mediaItems, setMediaItems] = useState<any[]>([]);
+  const [mediaItemType, setMediaItemType] = useState("");
+  const [mediaItemStoragePath, setMediaItemStoragePath] = useState("");
+  const [mediaItemTitle, setMediaItemTitle] = useState("");
   const [isFeatured, setIsFeatured] = useState(false);
   const [tags, setTags] = useState("");
   const [lastInsertId, setLastInsertId] = useState<string | null>(null);
+
+  const handleAddMediaItem = () => {
+    if (mediaItemType && mediaItemStoragePath && mediaItemTitle) {
+      setMediaItems([
+        ...mediaItems,
+        {
+          type: mediaItemType,
+          storagePath: mediaItemStoragePath,
+          title: mediaItemTitle,
+        },
+      ]);
+      setMediaItemType("");
+      setMediaItemStoragePath("");
+      setMediaItemTitle("");
+    } else {
+      alert("Please fill all media item fields.");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLastInsertId(null);
 
-    const mediaItemsArray = mediaItems.split(',').map(item => ({
-      type: "mp3", // Assuming mp3 for now, you might want to make this dynamic
-      storagePath: item.trim(),
-      title: item.trim().split('/').pop() // A simple way to get a title
-    }));
-    const tagsArray = tags.split(',').map(tag => tag.trim());
+    const tagsArray = tags.split(",").map((tag) => tag.trim());
 
     const { data, error } = await supabase
-      .from('content')
+      .from("content")
       .insert([
         {
           title,
@@ -34,7 +50,7 @@ export default function Home() {
           department,
           category,
           body,
-          media_items: mediaItemsArray,
+          media_items: mediaItems,
           is_featured: isFeatured,
           tags: tagsArray,
         },
@@ -42,24 +58,24 @@ export default function Home() {
       .select();
 
     if (error) {
-      console.error('Error inserting data:', error);
-      alert('Error submitting the form. Check the console for details.');
+      console.error("Error inserting data:", error);
+      alert("Error submitting the form. Check the console for details.");
     } else {
       const newContentId = data?.[0]?.content_id;
-      console.log('Data inserted successfully:', data);
+      console.log("Data inserted successfully:", data);
       alert(`Form submitted successfully! New Content ID: ${newContentId}`);
       if (newContentId) {
         setLastInsertId(newContentId);
       }
       // Clear form fields
-      setTitle('');
-      setAuthorName('');
-      setDepartment('');
-      setCategory('');
-      setBody('');
-      setMediaItems('');
+      setTitle("");
+      setAuthorName("");
+      setDepartment("");
+      setCategory("");
+      setBody("");
+      setMediaItems([]);
       setIsFeatured(false);
-      setTags('');
+      setTags("");
     }
   };
 
@@ -114,18 +130,26 @@ export default function Home() {
             <label htmlFor="category" className="font-medium">
               Category
             </label>
-            <input
-              type="text"
+            <select
               id="category"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className="rounded-md border border-solid border-black/[.08] dark:border-white/[.145] p-2"
               required
-            />
+            >
+              <option value="">Select a category</option>
+              <option value="Literary Arts">Literary Arts</option>
+              <option value="Print Media">Print Media</option>
+              <option value="Visual Arts">Visual Arts</option>
+              <option value="Photography">Photography</option>
+              <option value="Media & Mixed Arts">Media & Mixed Arts</option>
+              <option value="Radio & Podcasts">Radio & Podcasts</option>
+              <option value="Blogs">Blogs</option>
+            </select>
           </div>
           <div className="flex flex-col gap-2">
             <label htmlFor="body" className="font-medium">
-              Body
+              Description
             </label>
             <textarea
               id="body"
@@ -135,18 +159,64 @@ export default function Home() {
               required
             />
           </div>
-          <div className="flex flex-col gap-2">
-            <label htmlFor="mediaItems" className="font-medium">
-              Media Items (comma-separated paths)
-            </label>
-            <input
-              type="text"
-              id="mediaItems"
-              value={mediaItems}
-              onChange={(e) => setMediaItems(e.target.value)}
-              className="rounded-md border border-solid border-black/[.08] dark:border-white/[.145] p-2"
-              required
-            />
+          <div className="flex flex-col gap-4 border p-4 rounded-md">
+            <h3 className="font-medium">Media Items</h3>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="mediaItemType" className="font-medium text-sm">
+                Type
+              </label>
+              <input
+                type="text"
+                id="mediaItemType"
+                value={mediaItemType}
+                onChange={(e) => setMediaItemType(e.target.value)}
+                className="rounded-md border border-solid border-black/[.08] dark:border-white/[.145] p-2"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="mediaItemStoragePath"
+                className="font-medium text-sm"
+              >
+                Storage Path
+              </label>
+              <input
+                type="text"
+                id="mediaItemStoragePath"
+                value={mediaItemStoragePath}
+                onChange={(e) => setMediaItemStoragePath(e.target.value)}
+                className="rounded-md border border-solid border-black/[.08] dark:border-white/[.145] p-2"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="mediaItemTitle" className="font-medium text-sm">
+                Title
+              </label>
+              <input
+                type="text"
+                id="mediaItemTitle"
+                value={mediaItemTitle}
+                onChange={(e) => setMediaItemTitle(e.target.value)}
+                className="rounded-md border border-solid border-black/[.08] dark:border-white/[.145] p-2"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleAddMediaItem}
+              className="rounded-md bg-blue-500 text-white p-2"
+            >
+              Add Media Item
+            </button>
+            <div>
+              <h4 className="font-medium">Added Media Items:</h4>
+              <ul>
+                {mediaItems.map((item, index) => (
+                  <li key={index}>
+                    {item.title} ({item.type})
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
           <div className="flex flex-col gap-2">
             <label htmlFor="tags" className="font-medium">
